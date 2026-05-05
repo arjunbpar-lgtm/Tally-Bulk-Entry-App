@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+build/
+dist/
+output/
+*.xml
+*.zip
+*.json
+!docs/*.json
+*.log
