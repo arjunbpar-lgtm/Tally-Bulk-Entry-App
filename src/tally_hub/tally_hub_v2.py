@@ -13,13 +13,41 @@ from openpyxl import load_workbook
 
 try:
     from . import monthly_client_tally_converter as base
+    from .defaults import (
+        DEFAULT_BATCH,
+        DEFAULT_COMPANY_PROFILE_NAME,
+        DEFAULT_FALLBACK_UNIT,
+        DEFAULT_GODOWN,
+        DEFAULT_PURCHASE_LEDGER,
+        DEFAULT_PURCHASE_LOCAL_LEDGER,
+        DEFAULT_PURCHASE_PARTY_PARENT,
+        DEFAULT_SALES_LEDGER,
+        DEFAULT_SALES_PARTY_PARENT,
+        DEFAULT_STOCK_PARENT,
+        TALLY_HUB_APP_TITLE,
+        TALLY_HUB_STATE_FILE,
+    )
 except ImportError:
     import monthly_client_tally_converter as base
+    from defaults import (
+        DEFAULT_BATCH,
+        DEFAULT_COMPANY_PROFILE_NAME,
+        DEFAULT_FALLBACK_UNIT,
+        DEFAULT_GODOWN,
+        DEFAULT_PURCHASE_LEDGER,
+        DEFAULT_PURCHASE_LOCAL_LEDGER,
+        DEFAULT_PURCHASE_PARTY_PARENT,
+        DEFAULT_SALES_LEDGER,
+        DEFAULT_SALES_PARTY_PARENT,
+        DEFAULT_STOCK_PARENT,
+        TALLY_HUB_APP_TITLE,
+        TALLY_HUB_STATE_FILE,
+    )
 
 
-APP_TITLE = "Tally Hub v2.0"
-STATE_FILE = "tally_hub_v2_state.json"
-COMPANY_PROFILE_NAME = "HR FEEDS & FOODS"
+APP_TITLE = TALLY_HUB_APP_TITLE
+STATE_FILE = TALLY_HUB_STATE_FILE
+COMPANY_PROFILE_NAME = DEFAULT_COMPANY_PROFILE_NAME
 
 
 def _sanitize_output_folder_name(raw_name: object) -> str:
@@ -32,16 +60,16 @@ def _sanitize_output_folder_name(raw_name: object) -> str:
 @dataclass
 class HubConfig:
     company_name: str = ""
-    sales_ledger_name: str = "LOCAL SALES"
-    purchase_ledger_name: str = "INTERSTATE PURCHASE"
-    purchase_local_ledger_name: str = "LOCAL PURCHASE"
-    sales_party_parent: str = "Sundry Debtors"
-    purchase_party_parent: str = "Sundry Creditors"
+    sales_ledger_name: str = DEFAULT_SALES_LEDGER
+    purchase_ledger_name: str = DEFAULT_PURCHASE_LEDGER
+    purchase_local_ledger_name: str = DEFAULT_PURCHASE_LOCAL_LEDGER
+    sales_party_parent: str = DEFAULT_SALES_PARTY_PARENT
+    purchase_party_parent: str = DEFAULT_PURCHASE_PARTY_PARENT
     purchase_party_name_override: str = ""
-    stock_parent_group: str = "Primary"
-    godown_name: str = "Main Location"
-    batch_name: str = "Primary Batch"
-    fallback_unit: str = "Bag"
+    stock_parent_group: str = DEFAULT_STOCK_PARENT
+    godown_name: str = DEFAULT_GODOWN
+    batch_name: str = DEFAULT_BATCH
+    fallback_unit: str = DEFAULT_FALLBACK_UNIT
     output_dir: str = "."
 
 
@@ -70,8 +98,8 @@ def _extract_supplier_state_code(gst_no: object, state_code: object = "") -> str
 
 def _purchase_ledger_for_state_code(supplier_state_code: str, config: HubConfig) -> str:
     if supplier_state_code == "32":
-        return base.sanitize_xml_text(config.purchase_local_ledger_name or "LOCAL PURCHASE")
-    return base.sanitize_xml_text(config.purchase_ledger_name or "INTERSTATE PURCHASE")
+        return base.sanitize_xml_text(config.purchase_local_ledger_name or DEFAULT_PURCHASE_LOCAL_LEDGER)
+    return base.sanitize_xml_text(config.purchase_ledger_name or DEFAULT_PURCHASE_LEDGER)
 
 
 def _read_state(state_path: Path) -> Dict[str, List[str]]:
@@ -190,10 +218,16 @@ def parse_purchase_report_excel(
             resolved_item_name = master_snapshot.stock_items.get(normalized_item, item_name)
             item_resolution_cache[item_name] = resolved_item_name
         if resolved_item_name == item_name and base.normalize_key(item_name) not in master_snapshot.stock_items:
-            fallback_unit = unit_name or master_snapshot.units.get(base.normalize_key("Bag"), "Bag")
+            fallback_unit = unit_name or master_snapshot.units.get(
+                base.normalize_key(DEFAULT_FALLBACK_UNIT),
+                DEFAULT_FALLBACK_UNIT,
+            )
             missing_stock_candidates[base.normalize_key(item_name)] = (item_name, hsn, fallback_unit)
 
-        resolved_unit = unit_name or master_snapshot.units.get(base.normalize_key("Bag"), "Bag")
+        resolved_unit = unit_name or master_snapshot.units.get(
+            base.normalize_key(DEFAULT_FALLBACK_UNIT),
+            DEFAULT_FALLBACK_UNIT,
+        )
         if unit_name and master_snapshot.units:
             resolved_unit = master_snapshot.units.get(base.normalize_key(unit_name), unit_name)
 
@@ -204,7 +238,7 @@ def parse_purchase_report_excel(
                 resolved_item_name=resolved_item_name,
                 hsn=hsn,
                 qty=abs(qty),
-                unit_name=resolved_unit or "Bag",
+                unit_name=resolved_unit or DEFAULT_FALLBACK_UNIT,
                 amount=abs(amount),
             )
         )
@@ -646,13 +680,13 @@ def launch_gui() -> None:
             settings_box = QGroupBox("Import Settings")
             settings_form = QFormLayout(settings_box)
             self.company_input = QLineEdit()
-            self.ledger_input = QLineEdit("LOCAL SALES")
-            self.purchase_local_ledger_input = QLineEdit("LOCAL PURCHASE")
-            self.party_parent_input = QLineEdit("Sundry Debtors")
+            self.ledger_input = QLineEdit(DEFAULT_SALES_LEDGER)
+            self.purchase_local_ledger_input = QLineEdit(DEFAULT_PURCHASE_LOCAL_LEDGER)
+            self.party_parent_input = QLineEdit(DEFAULT_SALES_PARTY_PARENT)
             self.party_override_input = QLineEdit()
-            self.stock_parent_input = QLineEdit("Primary")
-            self.godown_input = QLineEdit("Main Location")
-            self.batch_input = QLineEdit("Primary Batch")
+            self.stock_parent_input = QLineEdit(DEFAULT_STOCK_PARENT)
+            self.godown_input = QLineEdit(DEFAULT_GODOWN)
+            self.batch_input = QLineEdit(DEFAULT_BATCH)
             self.output_dir_input = QLineEdit(str(Path.cwd()))
             self.ledger_label = QLabel("Sales ledger")
             self.purchase_local_ledger_label = QLabel("Local purchase ledger")
@@ -698,22 +732,22 @@ def launch_gui() -> None:
             self.workspace_title.setText(f"{COMPANY_PROFILE_NAME} - {module_name} Entry")
             if module_name == "Sales":
                 self.ledger_label.setText("Sales ledger")
-                self.ledger_input.setText("LOCAL SALES")
+                self.ledger_input.setText(DEFAULT_SALES_LEDGER)
                 self.purchase_local_ledger_label.hide()
                 self.purchase_local_ledger_input.hide()
                 self.party_parent_label.setText("Party parent group")
-                self.party_parent_input.setText("Sundry Debtors")
+                self.party_parent_input.setText(DEFAULT_SALES_PARTY_PARENT)
                 self.party_override_label.setText("Party ledger override")
                 self.party_override_input.clear()
                 self.party_override_input.setPlaceholderText("Optional")
             else:
                 self.ledger_label.setText("Interstate purchase ledger")
-                self.ledger_input.setText("INTERSTATE PURCHASE")
+                self.ledger_input.setText(DEFAULT_PURCHASE_LEDGER)
                 self.purchase_local_ledger_label.show()
                 self.purchase_local_ledger_input.show()
-                self.purchase_local_ledger_input.setText("LOCAL PURCHASE")
+                self.purchase_local_ledger_input.setText(DEFAULT_PURCHASE_LOCAL_LEDGER)
                 self.party_parent_label.setText("Supplier parent group")
-                self.party_parent_input.setText("Sundry Creditors")
+                self.party_parent_input.setText(DEFAULT_PURCHASE_PARTY_PARENT)
                 self.party_override_label.setText("Supplier ledger override")
                 self.party_override_input.setPlaceholderText("Optional exact Tally supplier ledger name")
             self.report_excel_path = ""
@@ -778,18 +812,18 @@ def launch_gui() -> None:
         def _build_config(self) -> HubConfig:
             config = HubConfig(
                 company_name=self.company_input.text().strip(),
-                stock_parent_group=self.stock_parent_input.text().strip() or "Primary",
-                godown_name=self.godown_input.text().strip() or "Main Location",
-                batch_name=self.batch_input.text().strip() or "Primary Batch",
+                stock_parent_group=self.stock_parent_input.text().strip() or DEFAULT_STOCK_PARENT,
+                godown_name=self.godown_input.text().strip() or DEFAULT_GODOWN,
+                batch_name=self.batch_input.text().strip() or DEFAULT_BATCH,
                 output_dir=self.output_dir_input.text().strip() or str(Path.cwd()),
             )
             if self.current_module == "Sales":
-                config.sales_ledger_name = self.ledger_input.text().strip() or "LOCAL SALES"
-                config.sales_party_parent = self.party_parent_input.text().strip() or "Sundry Debtors"
+                config.sales_ledger_name = self.ledger_input.text().strip() or DEFAULT_SALES_LEDGER
+                config.sales_party_parent = self.party_parent_input.text().strip() or DEFAULT_SALES_PARTY_PARENT
             else:
-                config.purchase_ledger_name = self.ledger_input.text().strip() or "INTERSTATE PURCHASE"
-                config.purchase_local_ledger_name = self.purchase_local_ledger_input.text().strip() or "LOCAL PURCHASE"
-                config.purchase_party_parent = self.party_parent_input.text().strip() or "Sundry Creditors"
+                config.purchase_ledger_name = self.ledger_input.text().strip() or DEFAULT_PURCHASE_LEDGER
+                config.purchase_local_ledger_name = self.purchase_local_ledger_input.text().strip() or DEFAULT_PURCHASE_LOCAL_LEDGER
+                config.purchase_party_parent = self.party_parent_input.text().strip() or DEFAULT_PURCHASE_PARTY_PARENT
                 config.purchase_party_name_override = self.party_override_input.text().strip()
             return config
 
@@ -892,15 +926,15 @@ def run_cli(args: argparse.Namespace) -> int:
 
     config = HubConfig(
         company_name=args.company or "",
-        sales_ledger_name=args.sales_ledger or "LOCAL SALES",
-        purchase_ledger_name=args.purchase_ledger or "INTERSTATE PURCHASE",
-        purchase_local_ledger_name=args.purchase_local_ledger or "LOCAL PURCHASE",
-        sales_party_parent=args.sales_party_parent or "Sundry Debtors",
-        purchase_party_parent=args.purchase_party_parent or "Sundry Creditors",
+        sales_ledger_name=args.sales_ledger or DEFAULT_SALES_LEDGER,
+        purchase_ledger_name=args.purchase_ledger or DEFAULT_PURCHASE_LEDGER,
+        purchase_local_ledger_name=args.purchase_local_ledger or DEFAULT_PURCHASE_LOCAL_LEDGER,
+        sales_party_parent=args.sales_party_parent or DEFAULT_SALES_PARTY_PARENT,
+        purchase_party_parent=args.purchase_party_parent or DEFAULT_PURCHASE_PARTY_PARENT,
         purchase_party_name_override=args.purchase_party_override or "",
-        stock_parent_group=args.stock_parent or "Primary",
-        godown_name=args.godown or "Main Location",
-        batch_name=args.batch or "Primary Batch",
+        stock_parent_group=args.stock_parent or DEFAULT_STOCK_PARENT,
+        godown_name=args.godown or DEFAULT_GODOWN,
+        batch_name=args.batch or DEFAULT_BATCH,
         output_dir=args.output_dir or str(Path.cwd()),
     )
     state_path = args.state_path or str(Path(config.output_dir) / STATE_FILE)
@@ -948,15 +982,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--report-excel", help="Path to Sales/Purchase Excel report")
     parser.add_argument("--master-xml", default=None, help="Optional path to current Tally master XML")
     parser.add_argument("--company", default="", help="Company name override")
-    parser.add_argument("--sales-ledger", default="LOCAL SALES", help="Sales ledger name")
-    parser.add_argument("--purchase-ledger", default="INTERSTATE PURCHASE", help="Interstate purchase ledger name")
-    parser.add_argument("--purchase-local-ledger", default="LOCAL PURCHASE", help="Kerala/local purchase ledger name")
-    parser.add_argument("--sales-party-parent", default="Sundry Debtors", help="Sales party parent group")
-    parser.add_argument("--purchase-party-parent", default="Sundry Creditors", help="Purchase party parent group")
+    parser.add_argument("--sales-ledger", default=DEFAULT_SALES_LEDGER, help="Sales ledger name")
+    parser.add_argument("--purchase-ledger", default=DEFAULT_PURCHASE_LEDGER, help="Interstate purchase ledger name")
+    parser.add_argument("--purchase-local-ledger", default=DEFAULT_PURCHASE_LOCAL_LEDGER, help="Kerala/local purchase ledger name")
+    parser.add_argument("--sales-party-parent", default=DEFAULT_SALES_PARTY_PARENT, help="Sales party parent group")
+    parser.add_argument("--purchase-party-parent", default=DEFAULT_PURCHASE_PARTY_PARENT, help="Purchase party parent group")
     parser.add_argument("--purchase-party-override", default="", help="Exact supplier ledger name to use for all purchase vouchers")
-    parser.add_argument("--stock-parent", default="Primary", help="Stock parent group for missing stock masters")
-    parser.add_argument("--godown", default="Main Location", help="Godown name")
-    parser.add_argument("--batch", default="Primary Batch", help="Batch name")
+    parser.add_argument("--stock-parent", default=DEFAULT_STOCK_PARENT, help="Stock parent group for missing stock masters")
+    parser.add_argument("--godown", default=DEFAULT_GODOWN, help="Godown name")
+    parser.add_argument("--batch", default=DEFAULT_BATCH, help="Batch name")
     parser.add_argument("--output-dir", default=str(Path.cwd()), help="Output folder")
     parser.add_argument("--state-path", default=None, help="State file path")
     parser.add_argument("--gui", action="store_true", help="Launch GUI")

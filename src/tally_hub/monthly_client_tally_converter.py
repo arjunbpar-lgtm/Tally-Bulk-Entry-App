@@ -12,9 +12,32 @@ import xml.etree.ElementTree as ET
 
 from openpyxl import load_workbook
 
+try:
+    from .defaults import (
+        DEFAULT_BATCH,
+        DEFAULT_FALLBACK_UNIT,
+        DEFAULT_GODOWN,
+        DEFAULT_SALES_LEDGER,
+        DEFAULT_SALES_PARTY_PARENT,
+        DEFAULT_STOCK_PARENT,
+        SALES_CONVERTER_APP_TITLE,
+        SALES_CONVERTER_STATE_FILE,
+    )
+except ImportError:
+    from defaults import (
+        DEFAULT_BATCH,
+        DEFAULT_FALLBACK_UNIT,
+        DEFAULT_GODOWN,
+        DEFAULT_SALES_LEDGER,
+        DEFAULT_SALES_PARTY_PARENT,
+        DEFAULT_STOCK_PARENT,
+        SALES_CONVERTER_APP_TITLE,
+        SALES_CONVERTER_STATE_FILE,
+    )
 
-APP_TITLE = "Monthly Client Tally Converter"
-STATE_FILE = "monthly_client_tally_state.json"
+
+APP_TITLE = SALES_CONVERTER_APP_TITLE
+STATE_FILE = SALES_CONVERTER_STATE_FILE
 
 
 def sanitize_xml_text(text: object) -> str:
@@ -97,12 +120,12 @@ class MasterSnapshot:
 @dataclass
 class ConversionConfig:
     company_name: str = ""
-    sales_ledger_name: str = "LOCAL SALES"
-    party_parent_group: str = "Sundry Debtors"
-    stock_parent_group: str = "Primary"
-    godown_name: str = "Main Location"
-    batch_name: str = "Primary Batch"
-    fallback_unit: str = "Bag"
+    sales_ledger_name: str = DEFAULT_SALES_LEDGER
+    party_parent_group: str = DEFAULT_SALES_PARTY_PARENT
+    stock_parent_group: str = DEFAULT_STOCK_PARENT
+    godown_name: str = DEFAULT_GODOWN
+    batch_name: str = DEFAULT_BATCH
+    fallback_unit: str = DEFAULT_FALLBACK_UNIT
     output_dir: str = "."
 
 
@@ -266,10 +289,16 @@ def parse_sales_report_excel(
             exact_item_name = master_snapshot.stock_items.get(normalized_item, item_name)
             item_resolution_cache[item_name] = exact_item_name
         if exact_item_name == item_name and normalize_key(item_name) not in master_snapshot.stock_items:
-            fallback_unit = unit_name or master_snapshot.units.get(normalize_key("Bag"), "Bag")
+            fallback_unit = unit_name or master_snapshot.units.get(
+                normalize_key(DEFAULT_FALLBACK_UNIT),
+                DEFAULT_FALLBACK_UNIT,
+            )
             missing_stock_candidates[normalize_key(item_name)] = (item_name, hsn, fallback_unit)
 
-        resolved_unit = unit_name or master_snapshot.units.get(normalize_key("Bag"), "Bag")
+        resolved_unit = unit_name or master_snapshot.units.get(
+            normalize_key(DEFAULT_FALLBACK_UNIT),
+            DEFAULT_FALLBACK_UNIT,
+        )
         if unit_name and master_snapshot.units:
             resolved_unit = master_snapshot.units.get(normalize_key(unit_name), unit_name)
 
@@ -279,7 +308,7 @@ def parse_sales_report_excel(
                 resolved_item_name=exact_item_name,
                 hsn=hsn,
                 qty=abs(qty) if qty is not None else Decimal("0"),
-                unit_name=resolved_unit or "Bag",
+                unit_name=resolved_unit or DEFAULT_FALLBACK_UNIT,
                 amount=abs(amount) if amount is not None else Decimal("0"),
             )
         )
@@ -469,7 +498,7 @@ def build_stock_masters_xml(
     applicable_from = datetime.now().strftime("%Y%m%d")
     for item_name, hsn, unit_name in missing_stock_items:
         clean_item_name = sanitize_xml_text(item_name)
-        clean_unit_name = sanitize_xml_text(unit_name or config.fallback_unit or "Bag")
+        clean_unit_name = sanitize_xml_text(unit_name or config.fallback_unit or DEFAULT_FALLBACK_UNIT)
         tally_message = ET.SubElement(request_data, "TALLYMESSAGE", attrib={"xmlns:UDF": "TallyUDF"})
         stock = ET.SubElement(
             tally_message,
@@ -666,11 +695,11 @@ def launch_gui() -> None:
             settings_box = QGroupBox("Import Settings")
             settings_form = QFormLayout(settings_box)
             self.company_input = QLineEdit()
-            self.sales_ledger_input = QLineEdit("LOCAL SALES")
-            self.party_parent_input = QLineEdit("Sundry Debtors")
-            self.stock_parent_input = QLineEdit("Primary")
-            self.godown_input = QLineEdit("Main Location")
-            self.batch_input = QLineEdit("Primary Batch")
+            self.sales_ledger_input = QLineEdit(DEFAULT_SALES_LEDGER)
+            self.party_parent_input = QLineEdit(DEFAULT_SALES_PARTY_PARENT)
+            self.stock_parent_input = QLineEdit(DEFAULT_STOCK_PARENT)
+            self.godown_input = QLineEdit(DEFAULT_GODOWN)
+            self.batch_input = QLineEdit(DEFAULT_BATCH)
             self.output_dir_input = QLineEdit(str(Path.cwd()))
             settings_form.addRow("Company name", self.company_input)
             settings_form.addRow("Sales ledger", self.sales_ledger_input)
@@ -743,12 +772,12 @@ def launch_gui() -> None:
         def _build_config(self) -> ConversionConfig:
             return ConversionConfig(
                 company_name=self.company_input.text().strip(),
-                sales_ledger_name=self.sales_ledger_input.text().strip() or "LOCAL SALES",
-                party_parent_group=self.party_parent_input.text().strip() or "Sundry Debtors",
-                stock_parent_group=self.stock_parent_input.text().strip() or "Primary",
-                godown_name=self.godown_input.text().strip() or "Main Location",
-                batch_name=self.batch_input.text().strip() or "Primary Batch",
-                fallback_unit="Bag",
+                sales_ledger_name=self.sales_ledger_input.text().strip() or DEFAULT_SALES_LEDGER,
+                party_parent_group=self.party_parent_input.text().strip() or DEFAULT_SALES_PARTY_PARENT,
+                stock_parent_group=self.stock_parent_input.text().strip() or DEFAULT_STOCK_PARENT,
+                godown_name=self.godown_input.text().strip() or DEFAULT_GODOWN,
+                batch_name=self.batch_input.text().strip() or DEFAULT_BATCH,
+                fallback_unit=DEFAULT_FALLBACK_UNIT,
                 output_dir=self.output_dir_input.text().strip() or str(Path.cwd()),
             )
 
@@ -834,12 +863,12 @@ def launch_gui() -> None:
 def run_cli(args: argparse.Namespace) -> int:
     config = ConversionConfig(
         company_name=args.company or "",
-        sales_ledger_name=args.sales_ledger or "LOCAL SALES",
-        party_parent_group=args.party_parent or "Sundry Debtors",
-        stock_parent_group=args.stock_parent or "Primary",
-        godown_name=args.godown or "Main Location",
-        batch_name=args.batch or "Primary Batch",
-        fallback_unit="Bag",
+        sales_ledger_name=args.sales_ledger or DEFAULT_SALES_LEDGER,
+        party_parent_group=args.party_parent or DEFAULT_SALES_PARTY_PARENT,
+        stock_parent_group=args.stock_parent or DEFAULT_STOCK_PARENT,
+        godown_name=args.godown or DEFAULT_GODOWN,
+        batch_name=args.batch or DEFAULT_BATCH,
+        fallback_unit=DEFAULT_FALLBACK_UNIT,
         output_dir=args.output_dir or str(Path.cwd()),
     )
 
@@ -868,11 +897,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--sales-excel", help="Path to the monthly sales Excel report")
     parser.add_argument("--master-xml", help="Optional path to current Tally master XML", default=None)
     parser.add_argument("--company", help="Company name override", default="")
-    parser.add_argument("--sales-ledger", help="Sales ledger name", default="LOCAL SALES")
-    parser.add_argument("--party-parent", help="Parent group for new party ledgers", default="Sundry Debtors")
-    parser.add_argument("--stock-parent", help="Parent group for missing stock items", default="Primary")
-    parser.add_argument("--godown", help="Godown name for inventory allocations", default="Main Location")
-    parser.add_argument("--batch", help="Batch name for inventory allocations", default="Primary Batch")
+    parser.add_argument("--sales-ledger", help="Sales ledger name", default=DEFAULT_SALES_LEDGER)
+    parser.add_argument("--party-parent", help="Parent group for new party ledgers", default=DEFAULT_SALES_PARTY_PARENT)
+    parser.add_argument("--stock-parent", help="Parent group for missing stock items", default=DEFAULT_STOCK_PARENT)
+    parser.add_argument("--godown", help="Godown name for inventory allocations", default=DEFAULT_GODOWN)
+    parser.add_argument("--batch", help="Batch name for inventory allocations", default=DEFAULT_BATCH)
     parser.add_argument("--output-dir", help="Output folder", default=str(Path.cwd()))
     parser.add_argument("--state-path", help="Optional state JSON path", default=None)
     parser.add_argument("--gui", action="store_true", help="Launch the desktop app")
