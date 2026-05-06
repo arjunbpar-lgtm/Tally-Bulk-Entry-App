@@ -1,1 +1,0 @@
-"""Tally Hub package."""

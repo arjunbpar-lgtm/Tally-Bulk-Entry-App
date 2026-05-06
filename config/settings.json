@@ -1,0 +1,23 @@
+{
+    "active_profile": "Default Office",
+    "profiles": {
+        "Default Office": {
+            "preset_mode": "Mixed Rural Collection",
+            "safe_mode": true,
+            "min_amount": 1000,
+            "max_amount": 9900,
+            "min_entries_per_day": 5,
+            "max_entries_per_day": 1000,
+            "voucher_type": "Journal",
+            "narration_text": "Being local rubber purchase paid in cash",
+            "ledger_name": "Local Rubber Purchase",
+            "rounding_multiple": 10,
+            "debit_ledger_name": "Purchase - GST",
+            "credit_ledger_name": "Local Purachase Creditors",
+            "numbering_mode": "Automatic (Continuous)",
+            "voucher_prefix": "",
+            "voucher_start_num": 1,
+            "narration_mode": "Automatic (Pre-filled)"
+        }
+    }
+}

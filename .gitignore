@@ -6,9 +6,11 @@ __pycache__/
 venv/
 build/
 dist/
+
+# Generated app output
+audit.log
+exports/
 output/
 *.xml
 *.zip
-*.json
-!docs/*.json
-*.log
+*.rprs

@@ -1,2 +1,5 @@
+pandas
 openpyxl
-PySide6
+numpy
+lxml
+pyinstaller
